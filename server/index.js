@@ -5,6 +5,7 @@ const dotenv = require('dotenv');
 const http = require('http');
 const { Server } = require('socket.io');
 const cron = require('node-cron');
+const port = process.env.PORT || 5000;
 
 dotenv.config();
 
@@ -84,7 +85,7 @@ server.on('error', (err) => {
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     console.log('MongoDB connected');
-    server.listen(PORT, () => {
+    server.listen(PORT, '0.0.0.0', () => {
       console.log(`FocusFlow Pro running on port ${PORT}`);
     });
   })

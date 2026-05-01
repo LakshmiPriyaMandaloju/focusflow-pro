@@ -22,7 +22,7 @@ export default function Timer({ onSessionEnd }) {
   const [remainingSecs, setRemainingSecs] = useState(25 * 60);
   const [isRunning, setIsRunning]         = useState(false);
   const [isPaused, setIsPaused]           = useState(false);
-  const [sessionId, setSessionId]         = useState(null);
+  const [, setSessionId] = useState(null);
   const [distractions, setDistractions]   = useState(0);
   const [sound, setSound]                 = useState('none');
   const [selectedGoal, setSelectedGoal]   = useState(null);
@@ -32,16 +32,17 @@ export default function Timer({ onSessionEnd }) {
   const audioRef                          = useRef(null);
 
   useEffect(() => {
-    fetchGoals();
-    checkActiveSession();
-    return () => clearInterval(intervalRef.current);
-  }, []);
+  fetchGoals();
+  checkActiveSession();
+  return () => clearInterval(intervalRef.current);
+}, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (remainingSecs <= 0 && isRunning) {
-      handleComplete();
-    }
-  }, [remainingSecs]);
+  if (remainingSecs <= 0 && isRunning) {
+    handleComplete();
+  }
+}, [remainingSecs]); // eslint-disable-line react-hooks/exhaustive-deps
+
 
   const fetchGoals = async () => {
     try {

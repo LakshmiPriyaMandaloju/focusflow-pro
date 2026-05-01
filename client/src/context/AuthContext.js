@@ -9,9 +9,9 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (token) fetchUser();
-    else setLoading(false);
-  }, [token]);
+  if (token) fetchUser();
+  else setLoading(false);
+}, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchUser = async () => {
     try {

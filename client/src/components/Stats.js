@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 
 export default function Stats({ stats, onRefresh }) {
   const [weekly, setWeekly]   = useState(null);
-  const [heatmap, setHeatmap] = useState([]);
+ const [, setHeatmap] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

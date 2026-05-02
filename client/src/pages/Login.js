@@ -257,4 +257,4 @@ const styles = {
     color: 'var(--accent)',
     fontWeight: '600',
   },
-};
+};  

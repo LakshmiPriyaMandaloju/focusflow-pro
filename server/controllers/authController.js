@@ -12,6 +12,9 @@ exports.register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
+    // Debug log add చేయండి
+    console.log('Register attempt:', { name, email });
+
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: 'Email already registered' });
@@ -25,6 +28,8 @@ exports.register = async (req, res) => {
       email,
       password: hashedPassword
     });
+
+    console.log('User created:', user._id);
 
     const token = generateToken(user._id);
 
@@ -44,7 +49,13 @@ exports.register = async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    // Detailed error log
+    console.error('Register error:', error.message);
+    console.error('Stack:', error.stack);
+    res.status(500).json({
+      message: 'Server error',
+      error: error.message  // ← ఇది add చేయండి
+    });
   }
 };
 

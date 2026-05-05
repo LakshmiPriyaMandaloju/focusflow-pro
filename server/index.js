@@ -41,8 +41,7 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Options preflight handle చేయండి
-app.options('/(.*)', cors());
+
 
 app.set('io', io);
 

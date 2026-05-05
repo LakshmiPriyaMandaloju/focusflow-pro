@@ -19,7 +19,7 @@ const io = new Server(server, {
   }
 });
 
-app.use(cors({
+/*app.use(cors({
   origin: [
     'http://localhost:3000',
     'https://focusflow-pro-pearl.vercel.app',
@@ -29,7 +29,20 @@ app.use(cors({
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
+})); */
+
+// Middleware — ఇవి routes కంటే ముందు ఉండాలి
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Options preflight handle చేయండి
+app.options('*', cors());
 
 app.set('io', io);
 

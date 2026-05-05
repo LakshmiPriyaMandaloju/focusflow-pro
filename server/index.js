@@ -55,6 +55,7 @@ app.use('/api/block',   require('./routes/block'));
 app.use('/api/stats',   require('./routes/stats'));
 app.use('/api/goals',   require('./routes/goals'));
 app.use('/api/social',  require('./routes/social'));
+app.use('/api/ai',      require('./routes/ai'));
 
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);

@@ -8,6 +8,8 @@ import Goals from '../components/Goals';
 import BlockedSites from '../components/BlockedSites';
 import History from '../components/History';
 import Leaderboard from '../components/Leaderboard';
+import AIAssistant from '../components/AIAssistant';
+
 
 const NAV_ITEMS = [
   { id: 'timer',       label: 'Focus Timer',  icon: '⏱️',  path: '/'           },
@@ -16,6 +18,7 @@ const NAV_ITEMS = [
   { id: 'blocking',    label: 'Blocking',     icon: '📵',  path: '/blocking'   },
   { id: 'history',     label: 'History',      icon: '📋',  path: '/history'    },
   { id: 'leaderboard', label: 'Leaderboard',  icon: '🏆',  path: '/leaderboard'},
+  { id: 'ai', label: 'AI Assistant', icon: '🧠', path: '/ai' },
 ];
 
 export default function Dashboard() {
@@ -172,6 +175,7 @@ export default function Dashboard() {
             <Route path="/blocking"    element={<BlockedSites />} />
             <Route path="/history"     element={<History />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
+            <Route path="/ai" element={<AIAssistant />} />
           </Routes>
         </div>
       </main>

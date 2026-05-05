@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <span class="logo">⚡</span>
+      <span class="title">FocusFlow</span>
+    </div>
+
+    <div id="login-section">
+      <p class="label">Login to sync your session</p>
+      <input type="email"    id="email"    placeholder="Email"    class="input">
+      <input type="password" id="password" placeholder="Password" class="input">
+      <button id="login-btn" class="btn primary">Login</button>
+      <p id="login-msg" class="msg"></p>
+    </div>
+
+    <div id="status-section" style="display:none;">
+      <div id="session-active" class="status-card active" style="display:none;">
+        <div class="status-dot green"></div>
+        <div>
+          <p class="status-title">Session Active 🔥</p>
+          <p class="status-sub">Blocking is ON</p>
+        </div>
+      </div>
+
+      <div id="session-inactive" class="status-card inactive">
+        <div class="status-dot gray"></div>
+        <div>
+          <p class="status-title">No Active Session</p>
+          <p class="status-sub">Blocking is OFF</p>
+        </div>
+      </div>
+
+      <div class="blocked-list">
+        <p class="label">Blocked Sites</p>
+        <div id="sites-list"></div>
+      </div>
+
+      <button id="open-app" class="btn primary">Open FocusFlow</button>
+      <button id="logout-btn" class="btn secondary">Logout</button>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

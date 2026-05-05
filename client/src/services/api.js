@@ -51,3 +51,7 @@ export const createRoom      = (data) => API.post('/social/room/create', data);
 export const joinRoom        = (id)   => API.post(`/social/room/join/${id}`);
 export const getRoom         = (id)   => API.get(`/social/room/${id}`);
 export const getLeaderboard  = ()     => API.get('/social/leaderboard');
+
+export const getAIAdvice   = ()     => API.get('/ai/advice');
+export const getStudyPlan  = (data) => API.post('/ai/plan', data);
+export const analyzeMood   = (data) => API.post('/ai/mood', data);

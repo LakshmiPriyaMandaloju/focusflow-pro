@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<body>
+<canvas id="c16"  width="16"  height="16"></canvas>
+<canvas id="c48"  width="48"  height="48"></canvas>
+<canvas id="c128" width="128" height="128"></canvas>
+<script>
+function drawIcon(canvasId, size) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  const grad = ctx.createLinearGradient(0, 0, size, size);
+  grad.addColorStop(0, '#6366f1');
+  grad.addColorStop(1, '#a855f7');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.roundRect(0, 0, size, size, size * 0.2);
+  ctx.fill();
+  ctx.fillStyle = 'white';
+  ctx.font = `bold ${size * 0.6}px Arial`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('⚡', size/2, size/2);
+  const link = document.createElement('a');
+  link.download = `icon${size}.png`;
+  link.href = canvas.toDataURL();
+  link.click();
+}
+drawIcon('c16', 16);
+setTimeout(() => drawIcon('c48', 48), 500);
+setTimeout(() => drawIcon('c128', 128), 1000);
+</script>
+</body>
+</html>

@@ -3,358 +3,363 @@ import * as api from '../services/api';
 import toast from 'react-hot-toast';
 
 export default function AIAssistant() {
-  const [advice, setAdvice]       = useState(null);
-  const [loading, setLoading]     = useState(false);
-  const [activeTab, setActiveTab] = useState('advice');
-  const [mood, setMood]           = useState(7);
-  const [energy, setEnergy]       = useState(7);
+  const [activeTab, setActiveTab]     = useState('insights');
+  const [advice, setAdvice]           = useState(null);
+  const [insightsLoading, setInsightsLoading] = useState(true);
+  const [insightsError, setInsightsError]     = useState('');
+  const [mood, setMood]               = useState(7);
+  const [energy, setEnergy]           = useState(7);
   const [moodResult, setMoodResult]   = useState(null);
+  const [moodLoading, setMoodLoading] = useState(false);
+  const [moodError, setMoodError]     = useState('');
   const [planForm, setPlanForm]       = useState({
     subject: '', targetDate: '', dailyHours: 2
   });
-  const [studyPlan, setStudyPlan] = useState(null);
+  const [studyPlan, setStudyPlan]     = useState(null);
   const [planLoading, setPlanLoading] = useState(false);
-  const [moodLoading, setMoodLoading] = useState(false);
+  const [planError, setPlanError]     = useState('');
 
-  useEffect(() => {
-    fetchAdvice();
-  }, []);
+  useEffect(() => { loadInsights(); }, []);
 
-  const fetchAdvice = async () => {
-    setLoading(true);
+  const loadInsights = async () => {
+    setInsightsLoading(true);
+    setInsightsError('');
+    setAdvice(null);
     try {
       const { data } = await api.getAIAdvice();
       setAdvice(data);
-    } catch {
-      toast.error('Failed to load AI advice');
+    } catch (err) {
+      setInsightsError(
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        'Failed to load insights'
+      );
     } finally {
-      setLoading(false);
+      setInsightsLoading(false);
     }
   };
 
-  const handleMoodAnalysis = async () => {
+  const handleMood = async () => {
     setMoodLoading(true);
+    setMoodError('');
+    setMoodResult(null);
     try {
       const { data } = await api.analyzeMood({ mood, energy });
       setMoodResult(data);
-    } catch {
-      toast.error('Failed to analyze mood');
+    } catch (err) {
+      setMoodError(
+        err.response?.data?.error ||
+        'Failed to analyze mood'
+      );
     } finally {
       setMoodLoading(false);
     }
   };
 
-  const handleStudyPlan = async () => {
-    if (!planForm.subject || !planForm.targetDate) {
-      return toast.error('Please fill all fields');
+  const handlePlan = async () => {
+    if (!planForm.subject.trim() || !planForm.targetDate) {
+      return toast.error('Please fill subject and date');
     }
     setPlanLoading(true);
+    setPlanError('');
+    setStudyPlan(null);
     try {
       const { data } = await api.getStudyPlan(planForm);
       setStudyPlan(data);
-    } catch {
-      toast.error('Failed to generate plan');
+    } catch (err) {
+      setPlanError(
+        err.response?.data?.error ||
+        'Failed to generate plan'
+      );
     } finally {
       setPlanLoading(false);
     }
   };
 
+  const TABS = [
+    { id: 'insights', label: '💡 Insights'    },
+    { id: 'mood',     label: '😊 Mood check'  },
+    { id: 'plan',     label: '📅 Study plan'  },
+  ];
+
   return (
-    <div style={styles.container}>
-      <div style={styles.header}>
+    <div style={s.container}>
+      <div style={s.header}>
         <div>
-          <h2 style={styles.title}>AI Focus Assistant</h2>
-          <p style={styles.subtitle}>Powered by Claude AI</p>
+          <h2 style={s.title}>AI Focus Assistant</h2>
+          <p style={s.subtitle}>Powered by Groq · LLaMA 3.3</p>
         </div>
-        <div style={styles.aiBadge}>
-          <span>🧠</span>
-          <span>AI</span>
-        </div>
+        <div style={s.badge}>🧠 AI</div>
       </div>
 
-      {/* Tabs */}
-      <div style={styles.tabs}>
-        {[
-          { id: 'advice', label: '💡 Insights',   },
-          { id: 'mood',   label: '😊 Mood Check'  },
-          { id: 'plan',   label: '📅 Study Plan'  },
-        ].map(tab => (
+      <div style={s.tabs}>
+        {TABS.map(t => (
           <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            key={t.id}
+            onClick={() => setActiveTab(t.id)}
             style={{
-              ...styles.tab,
-              ...(activeTab === tab.id ? styles.tabActive : {})
+              ...s.tab,
+              ...(activeTab === t.id ? s.tabActive : {})
             }}
           >
-            {tab.label}
+            {t.label}
           </button>
         ))}
       </div>
 
-      {/* Advice Tab */}
-      {activeTab === 'advice' && (
-        <div>
-          {loading ? (
-            <div style={styles.loadingCard}>
-              <div style={styles.loadingIcon}>🧠</div>
-              <p style={styles.loadingText}>
-                AI is analyzing your study patterns...
-              </p>
+      {/* Insights Tab */}
+      {activeTab === 'insights' && (
+        <div style={s.card}>
+          <p style={s.cardTitle}>Personalized insights</p>
+
+          {insightsLoading && (
+            <div style={s.loading}>
+              <span style={s.loadingIcon}>🧠</span>
+              <p>Analyzing your study patterns...</p>
             </div>
-          ) : advice ? (
-            <div>
-              <div style={styles.adviceCard}>
-                <div style={styles.adviceHeader}>
-                  <span style={styles.adviceIcon}>⚡</span>
-                  <span style={styles.adviceTitle}>
-                    Personalized Insights
-                  </span>
-                </div>
-                <p style={styles.adviceText}>{advice.advice}</p>
+          )}
+
+          {insightsError && (
+            <div style={s.errorBox}>{insightsError}</div>
+          )}
+
+          {advice && !insightsLoading && (
+            <>
+              <div style={s.adviceBox}>
+                <p style={s.adviceText}>{advice.advice}</p>
               </div>
 
-              <div style={styles.statsRow}>
+              <div style={s.statGrid}>
                 {[
-                  {
-                    label: 'Focus Score',
-                    value: advice.stats?.avgFocusScore || 0,
-                    icon: '🎯',
-                    color: '#6366f1'
-                  },
-                  {
-                    label: 'Completed',
-                    value: advice.stats?.completedSessions || 0,
-                    icon: '✅',
-                    color: '#10b981'
-                  },
-                  {
-                    label: 'Streak',
-                    value: `${advice.stats?.streak || 0}d`,
-                    icon: '🔥',
-                    color: '#f59e0b'
-                  },
-                  {
-                    label: 'Distractions',
-                    value: advice.stats?.totalDistractions || 0,
-                    icon: '⚠️',
-                    color: '#ef4444'
-                  },
-                ].map((stat, i) => (
-                  <div key={i} style={styles.statCard}>
-                    <span style={styles.statIcon}>{stat.icon}</span>
-                    <span style={{
-                      ...styles.statValue,
-                      color: stat.color
-                    }}>
-                      {stat.value}
-                    </span>
-                    <span style={styles.statLabel}>{stat.label}</span>
+                  { label: 'Focus score',  value: advice.stats?.avgFocusScore ?? 0   },
+                  { label: 'Sessions done',value: advice.stats?.completedSessions ?? 0},
+                  { label: 'Day streak',   value: `${advice.stats?.streak ?? 0}d`    },
+                  { label: 'Distractions', value: advice.stats?.totalDistractions ?? 0},
+                ].map((st, i) => (
+                  <div key={i} style={s.statCard}>
+                    <span style={s.statVal}>{st.value}</span>
+                    <span style={s.statLbl}>{st.label}</span>
                   </div>
                 ))}
               </div>
 
-              <button onClick={fetchAdvice} style={styles.refreshBtn}>
-                🔄 Refresh Insights
+              <button onClick={loadInsights} style={s.btn}>
+                🔄 Refresh insights
               </button>
-            </div>
-          ) : null}
+            </>
+          )}
         </div>
       )}
 
       {/* Mood Tab */}
       {activeTab === 'mood' && (
-        <div style={styles.moodCard}>
-          <h3 style={styles.cardTitle}>How are you feeling right now?</h3>
+        <div style={s.card}>
+          <p style={s.cardTitle}>How are you feeling?</p>
 
-          <div style={styles.sliderGroup}>
-            <div style={styles.sliderLabel}>
-              <span>😊 Mood</span>
-              <span style={styles.sliderValue}>{mood}/10</span>
+          <div style={s.sliderGroup}>
+            <div style={s.sliderRow}>
+              <span>Mood</span>
+              <span style={s.sliderVal}>{mood} / 10</span>
             </div>
             <input
-              type="range"
-              min="1" max="10"
+              type="range" min="1" max="10" step="1"
               value={mood}
               onChange={e => setMood(parseInt(e.target.value))}
-              style={styles.slider}
+              style={s.slider}
             />
-            <div style={styles.sliderHints}>
-              <span>Terrible</span>
-              <span>Amazing</span>
+            <div style={s.hintRow}>
+              <span>Terrible</span><span>Amazing</span>
             </div>
           </div>
 
-          <div style={styles.sliderGroup}>
-            <div style={styles.sliderLabel}>
-              <span>⚡ Energy</span>
-              <span style={styles.sliderValue}>{energy}/10</span>
+          <div style={s.sliderGroup}>
+            <div style={s.sliderRow}>
+              <span>Energy</span>
+              <span style={s.sliderVal}>{energy} / 10</span>
             </div>
             <input
-              type="range"
-              min="1" max="10"
+              type="range" min="1" max="10" step="1"
               value={energy}
               onChange={e => setEnergy(parseInt(e.target.value))}
-              style={styles.slider}
+              style={s.slider}
             />
-            <div style={styles.sliderHints}>
-              <span>Exhausted</span>
-              <span>Energized</span>
+            <div style={s.hintRow}>
+              <span>Exhausted</span><span>Energized</span>
             </div>
           </div>
 
           <button
-            onClick={handleMoodAnalysis}
+            onClick={handleMood}
             disabled={moodLoading}
-            style={moodLoading ? styles.btnDisabled : styles.btn}
+            style={moodLoading ? s.btnDisabled : s.btnPrimary}
           >
-            {moodLoading ? 'Analyzing...' : '🧠 Get AI Recommendation'}
+            {moodLoading ? 'Analyzing...' : 'Get AI recommendation'}
           </button>
 
+          {moodError && (
+            <div style={{...s.errorBox, marginTop: '1rem'}}>
+              {moodError}
+            </div>
+          )}
+
           {moodResult && (
-            <div style={styles.moodResult}>
-              <p style={styles.moodMessage}>{moodResult.message}</p>
-              <div style={styles.moodStats}>
-                <div style={styles.moodStat}>
-                  <span style={styles.moodStatVal}>
-                    {moodResult.sessionDuration}m
-                  </span>
-                  <span style={styles.moodStatKey}>Session Duration</span>
-                </div>
-                <div style={styles.moodStat}>
-                  <span style={styles.moodStatVal}>
-                    {moodResult.mode}
-                  </span>
-                  <span style={styles.moodStatKey}>Recommended Mode</span>
-                </div>
-                <div style={styles.moodStat}>
-                  <span style={styles.moodStatVal}>
-                    {moodResult.takeBreakFirst ? 'Yes' : 'No'}
-                  </span>
-                  <span style={styles.moodStatKey}>Take Break First</span>
-                </div>
+            <div style={s.resultBox}>
+              <p style={s.resultMsg}>{moodResult.message}</p>
+              <div style={s.resultGrid}>
+                {[
+                  { label: 'Session duration', value: `${moodResult.sessionDuration}m` },
+                  { label: 'Recommended mode', value: moodResult.mode                 },
+                  { label: 'Break first?',     value: moodResult.takeBreakFirst ? 'Yes' : 'No' },
+                ].map((r, i) => (
+                  <div key={i} style={s.resultItem}>
+                    <span style={s.resultVal}>{r.value}</span>
+                    <span style={s.resultKey}>{r.label}</span>
+                  </div>
+                ))}
               </div>
-              <div style={styles.moodTip}>
-                💡 {moodResult.tip}
-              </div>
+              <div style={s.tipBox}>💡 {moodResult.tip}</div>
             </div>
           )}
         </div>
       )}
 
-      {/* Study Plan Tab */}
+      {/* Plan Tab */}
       {activeTab === 'plan' && (
-        <div style={styles.planCard}>
-          <h3 style={styles.cardTitle}>Generate AI Study Plan</h3>
+        <>
+          <div style={s.card}>
+            <p style={s.cardTitle}>Generate AI study plan</p>
 
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Subject / Goal</label>
-            <input
-              value={planForm.subject}
-              onChange={e => setPlanForm({
-                ...planForm, subject: e.target.value
-              })}
-              placeholder="e.g. Complete DSA, Learn React, GATE Prep"
-              style={styles.input}
-            />
+            <div style={s.formGroup}>
+              <label style={s.label}>Subject / goal</label>
+              <input
+                value={planForm.subject}
+                onChange={e => setPlanForm({...planForm, subject: e.target.value})}
+                placeholder="e.g. Data Structures, GATE prep, React JS"
+                style={s.input}
+              />
+            </div>
+
+            <div style={s.formGroup}>
+              <label style={s.label}>Target date</label>
+              <input
+                type="date"
+                value={planForm.targetDate}
+                onChange={e => setPlanForm({...planForm, targetDate: e.target.value})}
+                style={s.input}
+              />
+            </div>
+
+            <div style={s.sliderGroup}>
+              <div style={s.sliderRow}>
+                <span style={{fontSize:'13px', color:'var(--text-secondary)'}}>
+                  Daily hours available
+                </span>
+                <span style={s.sliderVal}>{planForm.dailyHours}h</span>
+              </div>
+              <input
+                type="range" min="1" max="12" step="1"
+                value={planForm.dailyHours}
+                onChange={e => setPlanForm({
+                  ...planForm, dailyHours: parseInt(e.target.value)
+                })}
+                style={s.slider}
+              />
+            </div>
+
+            <button
+              onClick={handlePlan}
+              disabled={planLoading}
+              style={planLoading ? s.btnDisabled : s.btnPrimary}
+            >
+              {planLoading ? '🧠 AI is planning...' : '🚀 Generate study plan'}
+            </button>
+
+            {planError && (
+              <div style={{...s.errorBox, marginTop:'1rem'}}>
+                {planError}
+              </div>
+            )}
           </div>
 
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Target Date</label>
-            <input
-              type="date"
-              value={planForm.targetDate}
-              onChange={e => setPlanForm({
-                ...planForm, targetDate: e.target.value
-              })}
-              style={styles.input}
-            />
-          </div>
-
-          <div style={styles.formGroup}>
-            <label style={styles.label}>
-              Daily Available Hours: {planForm.dailyHours}h
-            </label>
-            <input
-              type="range"
-              min="1" max="12"
-              value={planForm.dailyHours}
-              onChange={e => setPlanForm({
-                ...planForm, dailyHours: parseInt(e.target.value)
-              })}
-              style={styles.slider}
-            />
-          </div>
-
-          <button
-            onClick={handleStudyPlan}
-            disabled={planLoading}
-            style={planLoading ? styles.btnDisabled : styles.btn}
-          >
-            {planLoading
-              ? '🧠 AI is planning...'
-              : '🚀 Generate Study Plan'}
-          </button>
+          {planLoading && (
+            <div style={s.loading}>
+              <span style={s.loadingIcon}>📅</span>
+              <p>AI is building your plan...</p>
+            </div>
+          )}
 
           {studyPlan && (
-            <div style={styles.planResult}>
-              <h3 style={styles.planTitle}>
-                {studyPlan.title || 'Your Study Plan'}
-              </h3>
-              <p style={styles.planOverview}>{studyPlan.overview}</p>
+            <div style={s.card}>
+              <p style={{
+                fontSize:'16px', fontWeight:'600',
+                color:'var(--text-primary)', marginBottom:'0.5rem'
+              }}>
+                {studyPlan.title || planForm.subject}
+              </p>
+              <p style={{
+                fontSize:'13px', color:'var(--text-secondary)',
+                lineHeight:'1.6', marginBottom:'1.25rem'
+              }}>
+                {studyPlan.overview}
+              </p>
 
-              {studyPlan.weeklyPlan?.map((week, i) => (
-                <div key={i} style={styles.weekCard}>
-                  <div style={styles.weekHeader}>
-                    <span style={styles.weekNum}>Week {week.week}</span>
-                    <span style={styles.weekFocus}>{week.focus}</span>
-                  </div>
-                  <div style={styles.weekDetails}>
-                    <span style={styles.weekStat}>
-                      ⏱️ {week.sessionDuration}m sessions
-                    </span>
-                    <span style={styles.weekStat}>
-                      📅 {week.sessionsPerDay}x daily
-                    </span>
-                  </div>
-                  {week.dailyTasks?.map((task, j) => (
-                    <div key={j} style={styles.task}>
-                      <span style={styles.taskDot}>▸</span>
-                      <span style={styles.taskText}>{task}</span>
+              {studyPlan.weeklyPlan?.length > 0 && (
+                <>
+                  <p style={s.cardTitle}>Weekly breakdown</p>
+                  {studyPlan.weeklyPlan.map((w, i) => (
+                    <div key={i} style={s.weekCard}>
+                      <div style={s.weekHead}>
+                        <span style={s.weekNum}>Week {w.week}</span>
+                        <span style={s.weekFocus}>{w.focus}</span>
+                      </div>
+                      <p style={{
+                        fontSize:'11px', color:'var(--text-muted)',
+                        marginBottom:'0.5rem'
+                      }}>
+                        {w.sessionDuration}m sessions · {w.sessionsPerDay}x daily
+                      </p>
+                      {w.dailyTasks?.map((t, j) => (
+                        <div key={j} style={s.task}>
+                          <span style={{color:'#6366f1'}}>▸</span>
+                          <span>{t}</span>
+                        </div>
+                      ))}
                     </div>
                   ))}
-                </div>
-              ))}
+                </>
+              )}
 
               {studyPlan.milestones?.length > 0 && (
-                <div style={styles.milestones}>
-                  <h4 style={styles.milestonesTitle}>🏆 Milestones</h4>
+                <>
+                  <p style={{...s.cardTitle, marginTop:'1rem'}}>Milestones</p>
                   {studyPlan.milestones.map((m, i) => (
-                    <div key={i} style={styles.milestone}>
-                      <span style={styles.milestoneDot}>✓</span>
-                      <span>{m}</span>
+                    <div key={i} style={{...s.task, padding:'4px 0'}}>
+                      <span style={{color:'#10b981'}}>✓</span>
+                      <span style={{fontSize:'13px', color:'var(--text-secondary)'}}>{m}</span>
                     </div>
                   ))}
-                </div>
+                </>
               )}
 
               {studyPlan.tips?.length > 0 && (
-                <div style={styles.tips}>
-                  <h4 style={styles.tipsTitle}>💡 Tips</h4>
-                  {studyPlan.tips.map((tip, i) => (
-                    <div key={i} style={styles.tip}>{tip}</div>
+                <>
+                  <p style={{...s.cardTitle, marginTop:'1rem'}}>Tips</p>
+                  {studyPlan.tips.map((t, i) => (
+                    <div key={i} style={{...s.tipBox, marginBottom:'6px'}}>
+                      {t}
+                    </div>
                   ))}
-                </div>
+                </>
               )}
             </div>
           )}
-        </div>
+        </>
       )}
     </div>
   );
 }
 
-const styles = {
+const s = {
   container: { maxWidth: '800px', margin: '0 auto' },
   header: {
     display: 'flex', justifyContent: 'space-between',
@@ -365,174 +370,145 @@ const styles = {
     color: 'var(--text-primary)',
   },
   subtitle: {
-    fontSize: '0.8rem', color: 'var(--text-muted)',
-    marginTop: '2px',
+    fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px',
   },
-  aiBadge: {
-    display: 'flex', alignItems: 'center', gap: '6px',
-    padding: '8px 16px',
-    background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+  badge: {
+    padding: '6px 14px',
+    background: 'var(--bg-hover)',
+    border: '1px solid var(--border)',
     borderRadius: '20px', fontSize: '0.875rem',
-    fontWeight: '600', color: '#fff',
+    color: 'var(--text-secondary)',
   },
   tabs: {
-    display: 'flex', gap: '8px', marginBottom: '1.5rem',
+    display: 'flex', gap: '6px',
+    borderBottom: '1px solid var(--border)',
+    marginBottom: '1.5rem',
   },
   tab: {
-    padding: '8px 18px', borderRadius: '20px',
-    border: '1px solid var(--border)',
-    background: 'transparent',
-    color: 'var(--text-secondary)',
-    fontSize: '0.875rem', cursor: 'pointer',
-    fontWeight: '500',
+    background: 'none', border: 'none',
+    borderBottom: '2px solid transparent',
+    padding: '8px 16px', fontSize: '0.875rem',
+    color: 'var(--text-secondary)', cursor: 'pointer',
+    marginBottom: '-1px', fontFamily: 'inherit',
   },
   tabActive: {
-    background: 'var(--accent-soft)',
-    borderColor: 'var(--accent)',
-    color: 'var(--accent)',
+    color: 'var(--text-primary)',
+    borderBottomColor: 'var(--accent)',
+    fontWeight: '600',
   },
-  loadingCard: {
-    display: 'flex', flexDirection: 'column',
-    alignItems: 'center', justifyContent: 'center',
-    padding: '4rem', gap: '1rem',
+  card: {
     background: 'var(--bg-card)',
     borderRadius: 'var(--radius-lg)',
-    border: '1px solid var(--border)',
-  },
-  loadingIcon: { fontSize: '3rem' },
-  loadingText: {
-    color: 'var(--text-secondary)', fontSize: '0.95rem',
-  },
-  adviceCard: {
-    background: 'linear-gradient(135deg, #1e1e2e, #1a1033)',
-    borderRadius: 'var(--radius-lg)',
     padding: '1.5rem',
-    border: '1px solid var(--accent)',
+    border: '1px solid var(--border)',
     marginBottom: '1rem',
   },
-  adviceHeader: {
-    display: 'flex', alignItems: 'center',
-    gap: '8px', marginBottom: '1rem',
-  },
-  adviceIcon: { fontSize: '1.25rem' },
-  adviceTitle: {
-    fontSize: '0.875rem', fontWeight: '600',
-    color: 'var(--accent)',
+  cardTitle: {
+    fontSize: '0.75rem', fontWeight: '600',
+    color: 'var(--text-muted)',
     textTransform: 'uppercase', letterSpacing: '0.05em',
+    marginBottom: '1rem',
+  },
+  loading: {
+    textAlign: 'center', padding: '3rem',
+    color: 'var(--text-secondary)',
+    display: 'flex', flexDirection: 'column',
+    alignItems: 'center', gap: '0.75rem',
+  },
+  loadingIcon: { fontSize: '2.5rem' },
+  errorBox: {
+    background: 'var(--red-soft)', color: 'var(--red)',
+    border: '1px solid var(--red)',
+    borderRadius: 'var(--radius)', padding: '0.75rem 1rem',
+    fontSize: '0.875rem',
+  },
+  adviceBox: {
+    background: 'var(--bg-secondary)',
+    borderRadius: 'var(--radius)',
+    padding: '1.25rem',
+    borderLeft: '3px solid var(--accent)',
+    marginBottom: '1rem',
   },
   adviceText: {
-    fontSize: '0.95rem', color: 'var(--text-secondary)',
+    fontSize: '0.9rem', color: 'var(--text-secondary)',
     lineHeight: '1.7', whiteSpace: 'pre-wrap',
   },
-  statsRow: {
-    display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
-    gap: '1rem', marginBottom: '1rem',
+  statGrid: {
+    display: 'grid', gridTemplateColumns: 'repeat(4,1fr)',
+    gap: '10px', marginBottom: '1rem',
   },
   statCard: {
-    background: 'var(--bg-card)',
-    borderRadius: 'var(--radius-lg)',
-    padding: '1rem',
-    border: '1px solid var(--border)',
-    display: 'flex', flexDirection: 'column',
-    alignItems: 'center', gap: '4px',
+    background: 'var(--bg-secondary)',
+    borderRadius: 'var(--radius-md)', padding: '1rem',
+    textAlign: 'center', display: 'flex',
+    flexDirection: 'column', gap: '4px',
   },
-  statIcon: { fontSize: '1.25rem' },
-  statValue: {
-    fontSize: '1.5rem', fontWeight: '700', lineHeight: 1,
+  statVal: {
+    fontSize: '1.5rem', fontWeight: '700',
+    color: 'var(--text-primary)',
   },
-  statLabel: {
+  statLbl: {
     fontSize: '0.7rem', color: 'var(--text-muted)',
-    textAlign: 'center',
-  },
-  refreshBtn: {
-    padding: '8px 20px', borderRadius: 'var(--radius)',
-    border: '1px solid var(--border)',
-    background: 'transparent',
-    color: 'var(--text-secondary)',
-    fontSize: '0.875rem', cursor: 'pointer',
-  },
-  moodCard: {
-    background: 'var(--bg-card)',
-    borderRadius: 'var(--radius-lg)',
-    padding: '1.5rem',
-    border: '1px solid var(--border)',
-  },
-  cardTitle: {
-    fontSize: '1rem', fontWeight: '600',
-    color: 'var(--text-primary)', marginBottom: '1.5rem',
-  },
-  sliderGroup: { marginBottom: '1.5rem' },
-  sliderLabel: {
-    display: 'flex', justifyContent: 'space-between',
-    marginBottom: '8px', fontSize: '0.875rem',
-    color: 'var(--text-secondary)',
-  },
-  sliderValue: {
-    fontWeight: '600', color: 'var(--accent)',
-  },
-  slider: {
-    width: '100%', accentColor: '#6366f1',
-  },
-  sliderHints: {
-    display: 'flex', justifyContent: 'space-between',
-    fontSize: '0.75rem', color: 'var(--text-muted)',
-    marginTop: '4px',
   },
   btn: {
+    padding: '8px 18px', borderRadius: 'var(--radius)',
+    border: '1px solid var(--border)', background: 'transparent',
+    color: 'var(--text-secondary)', fontSize: '0.875rem',
+    cursor: 'pointer',
+  },
+  btnPrimary: {
     width: '100%', padding: '0.85rem',
     borderRadius: 'var(--radius)', border: 'none',
     background: 'linear-gradient(135deg, #6366f1, #a855f7)',
     color: '#fff', fontSize: '0.95rem',
     fontWeight: '600', cursor: 'pointer',
-    marginTop: '0.5rem',
   },
   btnDisabled: {
     width: '100%', padding: '0.85rem',
     borderRadius: 'var(--radius)', border: 'none',
-    background: 'var(--bg-hover)',
-    color: 'var(--text-muted)',
-    fontSize: '0.95rem', fontWeight: '600',
-    cursor: 'not-allowed', marginTop: '0.5rem',
+    background: 'var(--bg-hover)', color: 'var(--text-muted)',
+    fontSize: '0.95rem', fontWeight: '600', cursor: 'not-allowed',
   },
-  moodResult: {
-    marginTop: '1.5rem',
+  sliderGroup: { marginBottom: '1.25rem' },
+  sliderRow: {
+    display: 'flex', justifyContent: 'space-between',
+    fontSize: '0.875rem', color: 'var(--text-secondary)',
+    marginBottom: '6px',
+  },
+  sliderVal: { fontWeight: '600', color: 'var(--text-primary)' },
+  slider: { width: '100%', accentColor: '#6366f1' },
+  hintRow: {
+    display: 'flex', justifyContent: 'space-between',
+    fontSize: '0.75rem', color: 'var(--text-muted)',
+    marginTop: '4px',
+  },
+  resultBox: {
     background: 'var(--bg-secondary)',
-    borderRadius: 'var(--radius)',
-    padding: '1.25rem',
-    border: '1px solid var(--border)',
+    borderRadius: 'var(--radius)', padding: '1.25rem',
+    marginTop: '1rem',
   },
-  moodMessage: {
-    fontSize: '0.95rem', color: 'var(--text-primary)',
-    marginBottom: '1rem', lineHeight: '1.6',
+  resultMsg: {
+    fontSize: '0.9rem', color: 'var(--text-primary)',
+    lineHeight: '1.6', marginBottom: '1rem',
   },
-  moodStats: {
+  resultGrid: {
     display: 'grid', gridTemplateColumns: 'repeat(3,1fr)',
-    gap: '1rem', marginBottom: '1rem',
+    gap: '10px', marginBottom: '1rem',
   },
-  moodStat: {
-    display: 'flex', flexDirection: 'column',
-    alignItems: 'center', gap: '4px',
+  resultItem: {
+    textAlign: 'center', display: 'flex',
+    flexDirection: 'column', gap: '4px',
   },
-  moodStatVal: {
-    fontSize: '1.1rem', fontWeight: '700',
+  resultVal: {
+    fontSize: '1.1rem', fontWeight: '600',
     color: 'var(--accent)',
   },
-  moodStatKey: {
-    fontSize: '0.7rem', color: 'var(--text-muted)',
-    textAlign: 'center',
-  },
-  moodTip: {
+  resultKey: { fontSize: '0.7rem', color: 'var(--text-muted)' },
+  tipBox: {
+    background: 'var(--green-soft)',
+    border: '1px solid var(--green)',
+    borderRadius: 'var(--radius)', padding: '0.75rem 1rem',
     fontSize: '0.875rem', color: 'var(--text-secondary)',
-    padding: '0.75rem',
-    background: 'var(--accent-soft)',
-    borderRadius: 'var(--radius)',
-    border: '1px solid var(--accent)',
-  },
-  planCard: {
-    background: 'var(--bg-card)',
-    borderRadius: 'var(--radius-lg)',
-    padding: '1.5rem',
-    border: '1px solid var(--border)',
   },
   formGroup: {
     display: 'flex', flexDirection: 'column',
@@ -548,88 +524,28 @@ const styles = {
     border: '1px solid var(--border)',
     background: 'var(--bg-secondary)',
     color: 'var(--text-primary)',
-    fontSize: '0.875rem', outline: 'none',
-  },
-  planResult: {
-    marginTop: '1.5rem',
-    background: 'var(--bg-secondary)',
-    borderRadius: 'var(--radius-lg)',
-    padding: '1.25rem',
-    border: '1px solid var(--border)',
-  },
-  planTitle: {
-    fontSize: '1.1rem', fontWeight: '700',
-    color: 'var(--accent)', marginBottom: '0.5rem',
-  },
-  planOverview: {
-    fontSize: '0.875rem', color: 'var(--text-secondary)',
-    marginBottom: '1rem', lineHeight: '1.6',
+    fontSize: '0.875rem', outline: 'none', width: '100%',
   },
   weekCard: {
-    background: 'var(--bg-card)',
-    borderRadius: 'var(--radius)',
-    padding: '1rem',
+    background: 'var(--bg-secondary)',
+    borderRadius: 'var(--radius)', padding: '1rem',
     marginBottom: '0.75rem',
-    border: '1px solid var(--border)',
   },
-  weekHeader: {
+  weekHead: {
     display: 'flex', alignItems: 'center',
-    gap: '10px', marginBottom: '0.5rem',
+    gap: '8px', marginBottom: '0.5rem',
   },
   weekNum: {
-    fontSize: '0.75rem', fontWeight: '700',
-    color: 'var(--accent)',
-    background: 'var(--accent-soft)',
-    padding: '2px 8px', borderRadius: '10px',
+    fontSize: '0.7rem', fontWeight: '600', color: '#6366f1',
+    background: 'var(--accent-soft)', padding: '2px 8px',
+    borderRadius: '10px',
   },
   weekFocus: {
     fontSize: '0.875rem', fontWeight: '600',
     color: 'var(--text-primary)',
   },
-  weekDetails: {
-    display: 'flex', gap: '1rem',
-    marginBottom: '0.75rem',
-  },
-  weekStat: {
-    fontSize: '0.78rem', color: 'var(--text-muted)',
-  },
   task: {
-    display: 'flex', gap: '8px',
-    padding: '3px 0',
+    display: 'flex', gap: '8px', padding: '2px 0',
     fontSize: '0.825rem', color: 'var(--text-secondary)',
-  },
-  taskDot: { color: 'var(--accent)', flexShrink: 0 },
-  taskText: { lineHeight: '1.4' },
-  milestones: {
-    marginTop: '1rem',
-    padding: '1rem',
-    background: 'var(--amber-soft)',
-    borderRadius: 'var(--radius)',
-    border: '1px solid var(--amber)',
-  },
-  milestonesTitle: {
-    fontSize: '0.875rem', fontWeight: '600',
-    color: 'var(--amber)', marginBottom: '0.5rem',
-  },
-  milestone: {
-    display: 'flex', gap: '8px',
-    fontSize: '0.825rem', color: 'var(--text-secondary)',
-    padding: '3px 0',
-  },
-  milestoneDot: { color: 'var(--amber)' },
-  tips: {
-    marginTop: '0.75rem',
-    padding: '1rem',
-    background: 'var(--green-soft)',
-    borderRadius: 'var(--radius)',
-    border: '1px solid var(--green)',
-  },
-  tipsTitle: {
-    fontSize: '0.875rem', fontWeight: '600',
-    color: 'var(--green)', marginBottom: '0.5rem',
-  },
-  tip: {
-    fontSize: '0.825rem', color: 'var(--text-secondary)',
-    padding: '3px 0', lineHeight: '1.5',
   },
 };

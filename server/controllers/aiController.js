@@ -1,88 +1,71 @@
-const Anthropic = require('@anthropic-ai/sdk');
+const Groq = require('groq-sdk');
 const StudySession = require('../models/StudySession');
 const User = require('../models/User');
 const Goal = require('../models/Goal');
 
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY
+const getGroqClient = () => new Groq({
+  apiKey: process.env.GROQ_API_KEY
 });
 
 exports.getFocusAdvice = async (req, res) => {
   try {
+    console.log('AI advice requested by:', req.user.id);
+    console.log('Groq Key exists:', !!process.env.GROQ_API_KEY);
+
     const user = await User.findById(req.user.id).select('-password');
-    const recentSessions = await StudySession.find({ userId: req.user.id })
-      .sort({ createdAt: -1 })
-      .limit(10);
+    const sessions = await StudySession.find({ userId: req.user.id })
+      .sort({ createdAt: -1 }).limit(10);
     const goals = await Goal.find({
-      userId: req.user.id,
-      status: 'active'
+      userId: req.user.id, status: 'active'
     }).limit(5);
 
-    const completedSessions = recentSessions.filter(
-      s => s.status === 'completed'
-    );
-    const brokenSessions = recentSessions.filter(
-      s => s.status === 'broken'
-    );
-    const avgFocusScore = completedSessions.length > 0
+    const completed = sessions.filter(s => s.status === 'completed');
+    const broken = sessions.filter(s => s.status === 'broken');
+    const avgScore = completed.length > 0
       ? Math.round(
-          completedSessions.reduce((a, s) => a + s.focusScore, 0) /
-          completedSessions.length
+          completed.reduce((a, s) => a + s.focusScore, 0) /
+          completed.length
         )
       : 0;
-    const totalDistractions = recentSessions.reduce(
+    const distractions = sessions.reduce(
       (a, s) => a + (s.distractionAttempts || 0), 0
     );
 
-    const userContext = `
-      Student Name: ${user.name}
-      Current Level: ${user.level}
-      Total XP: ${user.xp}
-      Current Streak: ${user.streak.current} days
-      Recent Sessions: ${recentSessions.length} total
-      Completed: ${completedSessions.length}
-      Broken Early: ${brokenSessions.length}
-      Average Focus Score: ${avgFocusScore}/100
-      Total Distractions: ${totalDistractions}
-      Active Goals: ${goals.map(g => `${g.title} (${Math.round((g.completedMinutes/g.targetMinutes)*100)}% done)`).join(', ') || 'None'}
-      Blocking Profile: ${user.blockingProfile}
-    `;
-
-    const message = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1000,
-      messages: [
-        {
-          role: 'user',
-          content: `You are FocusFlow AI — a smart, friendly study assistant. 
-          Analyze this student's data and give personalized, actionable advice.
-          Be encouraging, specific, and concise. Use emojis naturally.
-          Give exactly 3 insights and 2 action items. Keep it under 200 words.
-          
-          Student Data:
-          ${userContext}
-          
-          Provide:
-          1. Analysis of their current performance
-          2. Specific improvement suggestions
-          3. Motivational message based on their progress`
-        }
-      ]
+    const client = getGroqClient();
+    const completion = await client.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      max_tokens: 500,
+      messages: [{
+        role: 'user',
+        content: `You are FocusFlow AI assistant. Give brief, friendly study advice.
+        
+        Student: ${user.name}
+        Streak: ${user.streak?.current || 0} days
+        Completed sessions: ${completed.length}
+        Broken sessions: ${broken.length}
+        Avg focus score: ${avgScore}/100
+        Distractions: ${distractions}
+        Active goals: ${goals.map(g => g.title).join(', ') || 'None'}
+        
+        Give 3 short insights and 2 action items. Use emojis. Max 150 words.`
+      }]
     });
 
+    console.log('Groq response received!');
+
     res.json({
-      advice: message.content[0].text,
+      advice: completion.choices[0].message.content,
       stats: {
-        avgFocusScore,
-        completedSessions: completedSessions.length,
-        brokenSessions: brokenSessions.length,
-        totalDistractions,
-        streak: user.streak.current
+        avgFocusScore: avgScore,
+        completedSessions: completed.length,
+        brokenSessions: broken.length,
+        totalDistractions: distractions,
+        streak: user.streak?.current || 0
       }
     });
 
   } catch (error) {
-    console.error('AI error:', error.message);
+    console.error('AI Error:', error.message);
     res.status(500).json({
       message: 'AI service error',
       error: error.message
@@ -95,55 +78,59 @@ exports.getStudyPlan = async (req, res) => {
     const { subject, targetDate, dailyHours } = req.body;
     const user = await User.findById(req.user.id).select('-password');
 
-    const message = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+    const client = getGroqClient();
+    const completion = await client.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
       max_tokens: 1000,
-      messages: [
+      messages: [{
+        role: 'system',
+        content: 'You are a study planner. Always respond with valid JSON only. No extra text.'
+      }, {
+        role: 'user',
+        content: `Create a study plan for:
+        Student: ${user.name}
+        Subject: ${subject}
+        Target Date: ${targetDate}
+        Daily Hours: ${dailyHours}
+        
+        Return ONLY this JSON:
         {
-          role: 'user',
-          content: `You are FocusFlow AI — a smart study planner.
-          Create a detailed, realistic study plan.
-          Format as JSON only, no extra text.
-          
-          Student: ${user.name}
-          Subject/Goal: ${subject}
-          Target Date: ${targetDate}
-          Daily Available Hours: ${dailyHours}
-          Current Streak: ${user.streak.current} days
-          
-          Return JSON:
-          {
-            "title": "plan title",
-            "overview": "brief overview",
-            "weeklyPlan": [
-              {
-                "week": 1,
-                "focus": "topic",
-                "dailyTasks": ["task1", "task2"],
-                "sessionDuration": 25,
-                "sessionsPerDay": 3
-              }
-            ],
-            "tips": ["tip1", "tip2", "tip3"],
-            "milestones": ["milestone1", "milestone2"]
-          }`
-        }
-      ]
+          "title": "string",
+          "overview": "string",
+          "weeklyPlan": [
+            {
+              "week": 1,
+              "focus": "string",
+              "dailyTasks": ["task1", "task2"],
+              "sessionDuration": 25,
+              "sessionsPerDay": 3
+            }
+          ],
+          "tips": ["tip1", "tip2", "tip3"],
+          "milestones": ["m1", "m2", "m3"]
+        }`
+      }]
     });
 
     let plan;
     try {
-      const text = message.content[0].text;
+      const text = completion.choices[0].message.content.trim();
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       plan = JSON.parse(jsonMatch ? jsonMatch[0] : text);
     } catch {
-      plan = { overview: message.content[0].text };
+      plan = {
+        title: subject,
+        overview: completion.choices[0].message.content,
+        weeklyPlan: [],
+        tips: [],
+        milestones: []
+      };
     }
 
     res.json(plan);
 
   } catch (error) {
-    console.error('AI Plan error:', error.message);
+    console.error('Study Plan Error:', error.message);
     res.status(500).json({
       message: 'AI service error',
       error: error.message
@@ -155,52 +142,47 @@ exports.analyzeMood = async (req, res) => {
   try {
     const { mood, energy } = req.body;
 
-    const message = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 500,
-      messages: [
+    const client = getGroqClient();
+    const completion = await client.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      max_tokens: 300,
+      messages: [{
+        role: 'system',
+        content: 'You are a study coach. Always respond with valid JSON only. No extra text.'
+      }, {
+        role: 'user',
+        content: `Student mood: ${mood}/10, energy: ${energy}/10.
+        
+        Return ONLY this JSON:
         {
-          role: 'user',
-          content: `You are FocusFlow AI. A student reports:
-          Mood: ${mood}/10
-          Energy: ${energy}/10
-          
-          Based on this, recommend:
-          1. Ideal session duration (in minutes)
-          2. Study mode (pomodoro/long/short)
-          3. One motivational tip
-          4. Whether to take a break first
-          
-          Return JSON only:
-          {
-            "sessionDuration": 25,
-            "mode": "pomodoro",
-            "tip": "...",
-            "takeBreakFirst": false,
-            "message": "personalized message"
-          }`
-        }
-      ]
+          "sessionDuration": 25,
+          "mode": "pomodoro",
+          "tip": "one specific tip here",
+          "takeBreakFirst": false,
+          "message": "personalized encouraging message here"
+        }`
+      }]
     });
 
-    let recommendation;
+    let result;
     try {
-      const text = message.content[0].text;
+      const text = completion.choices[0].message.content.trim();
       const jsonMatch = text.match(/\{[\s\S]*\}/);
-      recommendation = JSON.parse(jsonMatch ? jsonMatch[0] : text);
+      result = JSON.parse(jsonMatch ? jsonMatch[0] : text);
     } catch {
-      recommendation = {
-        sessionDuration: 25,
-        mode: 'pomodoro',
+      result = {
+        sessionDuration: mood < 5 ? 15 : 25,
+        mode: mood < 5 ? 'short' : 'pomodoro',
         tip: 'Start small and build momentum!',
-        takeBreakFirst: false,
-        message: message.content[0].text
+        takeBreakFirst: energy < 4,
+        message: completion.choices[0].message.content
       };
     }
 
-    res.json(recommendation);
+    res.json(result);
 
   } catch (error) {
+    console.error('Mood Error:', error.message);
     res.status(500).json({
       message: 'AI service error',
       error: error.message
